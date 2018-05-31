@@ -6,8 +6,8 @@
 
 #define NB_SITES	10
 #define M			6 // clee encodee sur M bits, doit etre inferieur à NB_SITES
-#define I			((int) pow(2, M)) - 1
-#define K			((int) pow(2, M)) - 1
+#define I			((int) pow(2, M))
+#define K			((int) pow(2, M))
 
 #define TAGINIT		0
 #define TAGSEARCH	1
@@ -37,17 +37,6 @@ void int_print_table(int *table, int length) {
 ///////////////////////////////////////////////////////////////////////////////////////////
 //										PROGRAMME DHT
 ///////////////////////////////////////////////////////////////////////////////////////////
-
-		// // printf("envoi a position: %d, chord_ids: %d\n", position, chord_ids[i]);
-		// MPI_Send(&chord_ids[i], 1, MPI_INT, position, TAGINIT, MPI_COMM_WORLD);
-
-		// // printf("envoi a position: %d, succ_id_chord: %d\n", position, chord_succ[i]);
-		// MPI_Send(&chord_ids[(i+1)%NB_SITES], 1, MPI_INT, position, TAGINIT, MPI_COMM_WORLD);
-
-		// for(j = 0; j < M; j++) {
-		// 	// printf("envoi a position: %d, finger_table\n", i);
-		// 	MPI_Send(&finger_tables[i][j], 2, MPI_INT, position, TAGINIT, MPI_COMM_WORLD);
-		// }
 
 void receive_params(int *chord_id, int *chord_succ, int **finger_table_chord_ids, int **finger_table_mpi_ids, int *length) 
 {
@@ -84,7 +73,25 @@ err:
 	exit(-1);
 }
 
-void dht_node(int position) 
+static int lookup(int search_data_key, int chord_id, int *finger_table_chord_ids, int *finger_table_mpi_ids, int length) {
+	int found, i;
+	if(search_data_key > chord_id) { // si la donnée que 
+
+	}
+
+	if( chord_id > finger_table_chord_ids[length - 1] ) { // exemple: 13 à la fin de la ft de 42 et on recherche 48 qui se trouve en haut
+		
+	} else { // cas normal
+		found = -1;
+		for(i = length - 1; (found == -1) (i >= 0); i++)
+			if(finger_table_chord_ids[i] <= search_data_key)
+				found = i;
+	}
+
+	return 0;
+}
+
+void dht_node(int mpi_id) 
 {
 	int chord_id, chord_succ, *finger_table_chord_ids, *finger_table_mpi_ids, length, i, recu, j;
 	int search_chord_id, search_mpi_id, search_data_key, search_position;
@@ -101,11 +108,13 @@ void dht_node(int position)
 	// printf("site %d: finger table2:", position);
 	// int_print_table(finger_table_mpi_ids, length);
 	
+	// printf("site %d: finger table1:", position);
+	// int_print_table(finger_table_chord_ids, length);
 	
+	// reception de la requete de recherche
 	MPI_Recv(&search_data_key, 1, MPI_INT, 0, TAGSEARCH, MPI_COMM_WORLD, &status);
 
-	printf("site %d: finger table1:", position);
-	int_print_table(finger_table_chord_ids, length);
+
 
 	//look in the finger table
 	search_position = find_next_node(search_data_key, finger_table_chord_ids, length);
@@ -116,7 +125,7 @@ void dht_node(int position)
 	}
 	search_mpi_id = contains(search_chord_id, finger_table_chord_ids, length);
 
-	printf("site %d: %d %d %d\n", position, search_data_key, search_chord_id, search_mpi_id);
+	printf("site %d: %d %d %d\n", mpi_id, search_data_key, search_chord_id, search_mpi_id);
 
 
 	// // attente de la réception des messages des voisins
@@ -175,7 +184,7 @@ static int new_chord_id(int *table, int length)
 {
 	int id;
 	do {
-		id = rand() % I + 1;
+		id = rand() % I;
 	} while(contains(id, table, length) != -1);
 	return id;
 }
@@ -240,6 +249,25 @@ static inline int find_next_node(int value, int *chord_ids, int length)
 	return -1;
 }
 
+static void calculate_finger_table(int *chord_ids, int ***finger_tables, int chord_id_position) {
+	int value, position, j;
+	for(j = 0; j < M; j++) {
+		value = (chord_ids[chord_id_position] + ((int) pow(2, j))) % ((int) pow(2, M));
+		position = find_next_node(value, chord_ids, NB_SITES);
+		if(position == -1) {
+			finger_tables[chord_id_position][0][j] = chord_ids[1];
+			finger_tables[chord_id_position][1][j] = 1;
+		} else {
+			finger_tables[chord_id_position][0][j] = chord_ids[position];
+			finger_tables[chord_id_position][1][j] = position + 1; // car rang MPI
+		}
+	}
+	printf("site %d: finger table:\n", chord_id_position+1);
+	int_print_table(finger_tables[chord_id_position][0], M);
+	int_print_table(finger_tables[chord_id_position][1], M);
+	printf("\n");
+}
+
 
 void simulateur() 
 {
@@ -248,8 +276,11 @@ void simulateur()
 	
 	printf("\nDHT Centralise\n");
 
+
+	// data
 	int chord_ids[NB_SITES];
 	int finger_tables[NB_SITES][2][M]; // premiere colonne id chord, deuxieme colonne id MPI
+
 
 	//to del:
 	int value;
@@ -267,10 +298,11 @@ void simulateur()
 	printf("chord_ids table: \n");
 	int_print_table(chord_ids, NB_SITES);
 
-	// calcul des finger tables
+	// pour chaque site, calcul des finger tables
 	for(i = 0; i < NB_SITES; i++) {
+
 		for(j = 0; j < M; j++) {
-			value = (chord_ids[i] + ((int) pow(2, j))) % ((int) pow(2, K));
+			value = (chord_ids[i] + ((int) pow(2, j))) % ((int) pow(2, M));
 			position = find_next_node(value, chord_ids, NB_SITES);
 			if(position == -1) {
 				finger_tables[i][0][j] = chord_ids[1];
@@ -280,8 +312,10 @@ void simulateur()
 				finger_tables[i][1][j] = position + 1; // car rang MPI
 			}
 		}
-		// printf("site %d: finger table:", i+1);
-		// int_print_table(finger_tables[i][0], M);
+		printf("site %d: finger table:\n", i+1);
+		int_print_table(finger_tables[i][0], M);
+		int_print_table(finger_tables[i][1], M);
+		printf("\n");
 	}
 
 	for(i = 0; i < NB_SITES; i++){
@@ -335,7 +369,7 @@ err:
 
 int main (int argc, char* argv[]) 
 {
-	int nb_proc,position;
+	int nb_proc, mpi_id;
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &nb_proc);
 
@@ -345,12 +379,12 @@ int main (int argc, char* argv[])
 		exit(2);
 	}
 
-	MPI_Comm_rank(MPI_COMM_WORLD, &position);
+	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_id);
 
-	if(position == 0) {
+	if(mpi_id == 0) {
 		simulateur();
 	} else {
-		dht_node(position);
+		dht_node(mpi_id);
 	}
 
 	MPI_Finalize();
