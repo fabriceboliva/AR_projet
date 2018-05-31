@@ -1,0 +1,35 @@
+Ex 1:
+2) 
+Exécution 1:
+Algorithme de l'arbre
+site: 1, min = 3 -> decideur
+site: 3, min = 3 -> decideur
+site: 2, min = 3
+site: 4, min = 3
+site: 6, min = 3
+site: 5, min = 3
+
+Exécution 2:
+Algorithme de l'arbre
+site: 1, min = 3 -> decideur
+site: 3, min = 3
+site: 6, min = 3
+site: 2, min = 3 -> decideur
+site: 4, min = 3
+site: 5, min = 3
+
+On peut constater qu'il y a exactement deux décideurse.
+
+Ex 2:
+Algorithme de l'echo
+site: 3, pere:1, min_local:5
+site: 5, pere:1, min_local:5
+site: 6, pere:4, min_local:5
+site: 4, pere:2, min_local:5
+site: 2, pere:1, min_local:5
+site: 1, decision:5
+site: 3, min:5
+site: 5, min:5
+site: 2, min:5
+site: 4, min:5
+site: 6, min:5
