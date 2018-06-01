@@ -4,7 +4,9 @@
 
 CC = mpicc
 LDFLAGS = -lm
-CFLAGS =
+CFLAGS = 
+# -W -Wall
+
 
 DIR=.
 BIN=$(DIR)/bin/
