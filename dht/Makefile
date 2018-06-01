@@ -24,10 +24,10 @@ all: $(BIN)dht_chord_centralise $(BIN)echo
 test: test-dht_chord_centralise test-echo
 
 test-dht_chord_centralise: $(BIN)dht_chord_centralise
-	-mpirun --hostfile $$master/ar/projet/dht/host -np 11 $$PWD/bin/dht_chord_centralise
+	-mpirun --hostfile $$PWD/host -np 11 $$PWD/bin/dht_chord_centralise
 
 test-echo: $(BIN)echo
-	-mpirun --hostfile $$master/ar/projet/dht/host -np 7 $$PWD/bin/echo
+	-mpirun --hostfile $$PWD/host -np 7 $$PWD/bin/echo
 
 $(BIN)%: $(OBJ)%.o
 	@if [ -d $(BIN) ]; then : ; else mkdir $(BIN); fi

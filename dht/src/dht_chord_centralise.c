@@ -237,21 +237,19 @@ static inline int find_next_node(int value, int *chord_ids, int length)
 	return -1;
 }
 
-	// value = (chord_ids[i] + ((int) pow(2, j))) % ((int) pow(2, M));
-			
-	// 		position = find_next_node(value, chord_ids, NB_SITES);
-	// 		if(position == -1) {
-	// 			finger_tables[i][0][j] = chord_ids[0];
-	// 			finger_tables[i][1][j] = 1; // car rang MPI
-	// 		} else {
-	// 			finger_tables[i][0][j] = chord_ids[position];
-	// 			finger_tables[i][1][j] = position + 1; // car rang MPI
-	// 		}
-	// 	}
-	// 	printf("[CHORD] %d: finger table: ", chord_ids[i]); // id_mpi i+
-	// 	int_print_table(finger_tables[i][0], M);
-	// 	// int_print_table(finger_tables[i][1], M); // rang MPI
-	// 	printf("\n");
+		// 	position = find_next_node(value, chord_ids, NB_SITES);
+		// 	if(position == -1) {
+		// 		finger_tables[i][0][j] = chord_ids[0];
+		// 		finger_tables[i][1][j] = 1; // car rang MPI
+		// 	} else {
+		// 		finger_tables[i][0][j] = chord_ids[position];
+		// 		finger_tables[i][1][j] = position + 1; // car rang MPI
+		// 	}
+		// }
+		// printf("[CHORD] %d: finger table: ", chord_ids[i]); // id_mpi i+
+		// int_print_table(finger_tables[i][0], M);
+		// // int_print_table(finger_tables[i][1], M); // rang MPI
+		// printf("\n");
 
 static void calculate_finger_table(int *chord_ids, int ***finger_tables, int chord_id_position) {
 	int value, position, j;
