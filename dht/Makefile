@@ -18,16 +18,16 @@ SRC=$(DIR)/src/
 HC=
 
 .SUFFIXES:
-.PHONY: all clean test-arbre test-echo arbre echo
-all: $(BIN)dht_chord_centralise $(BIN)echo
+.PHONY: all clean test-dht_chord_centralise test-dht_reparti_finger_table dht_chord_centralise dht_reparti_finger_table
+all: $(BIN)dht_chord_centralise $(BIN)dht_reparti_finger_table
 
-test: test-dht_chord_centralise test-echo
+test: test-dht_chord_centralise test-dht_reparti_finger_table
 
 test-dht_chord_centralise: $(BIN)dht_chord_centralise
 	-mpirun --hostfile $$PWD/host -np 11 $$PWD/bin/dht_chord_centralise
 
-test-echo: $(BIN)echo
-	-mpirun --hostfile $$PWD/host -np 7 $$PWD/bin/echo
+test-dht_reparti_finger_table: $(BIN)dht_reparti_finger_table
+	-mpirun --hostfile $$PWD/host -np 11 $$PWD/bin/dht_reparti_finger_table
 
 $(BIN)%: $(OBJ)%.o
 	@if [ -d $(BIN) ]; then : ; else mkdir $(BIN); fi

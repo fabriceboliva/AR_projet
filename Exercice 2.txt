@@ -1,5 +1,11 @@
 Exercice 2 
 
-1: Pour réaliser la calcul des fingers, on va utiliser l'algorithme de Hirschberg & Sinclair (complexité n log n). Il suffit de faire transiter     <leaderid,compteur,M> à la place de <leaderid,compteur> avec M un tableau qui récolte les nombres chords, pour gérer la nouvelle structure de message on doit modifier la partie de traitement des messages reçus : si perdant, ajouter sa propre liste de nombre chord N  à M reçu (fusion) , stocker la nouvelle M localement puis l'envoyer au suivant.
-Comme dans l'algorithme, chaque node envoie 2 messages (gauche et droite), lorsqu' les 2 messages reviennent sur le vainqueur, le vainqueur connaîtra la nouvellle M qui contient tout les nombres chord. Et tout les autres nodes contiennent aussi la même liste des nombres chord M. 
+1: 
+Pour réaliser le calcul des fingers table, nous allons utiliser une adaptation de l'algorithme d'élection de Hirschberg & Sinclair (complexité en nombres de messages de O(n log n)).
 
+L'adaptation de l'algorithme consiste à l'ajout au contenu du message, un tableau récoltant tous les identifiants chord nécessaire au calcul des fingers table.
+Les messages auront pour forme: <leader_chord_id, ttl, chord_ids> 
+
+Pour gérer la nouvelle structure des messages, il faudra modifier la partie du traitement des messages reçus dans le cas du perdant: fusionner son tableau des pairs chord récoltés avec le tableau reçu, ensuite stocker ce tableau en local et l'envoyer au pair suivant.
+
+Dans cet algorithme, chaque site envoie 2 messages (à gauche et à droite), lorsque les 2 messages ont fait le tour de l'anneau (reviennent au vainqueur), le vainqueur aura le tableau des identifiants chord complet. Et tout les pairs contiennent également le même tableau des identifiants chord complet, ce qui permettra à chaque noeud d'effectuer le calcul de son finger table localement.
