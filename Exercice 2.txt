@@ -1,0 +1,5 @@
+Exercice 2 
+
+1: Pour réaliser la calcul des fingers, on va utiliser l'algorithme de Hirschberg & Sinclair (complexité n log n). Il suffit de faire transiter     <leaderid,compteur,M> à la place de <leaderid,compteur> avec M un tableau qui récolte les nombres chords, pour gérer la nouvelle structure de message on doit modifier la partie de traitement des messages reçus : si perdant, ajouter sa propre liste de nombre chord N  à M reçu (fusion) , stocker la nouvelle M localement puis l'envoyer au suivant.
+Comme dans l'algorithme, chaque node envoie 2 messages (gauche et droite), lorsqu' les 2 messages reviennent sur le vainqueur, le vainqueur connaîtra la nouvellle M qui contient tout les nombres chord. Et tout les autres nodes contiennent aussi la même liste des nombres chord M. 
+
