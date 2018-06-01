@@ -18,7 +18,7 @@
 #define TAGRES		3
 #define TAGEND		4
 
-#define MAXNUMBER 12
+#define MAXNUMBER 100
 
 
 
@@ -89,7 +89,7 @@ void receive_params(int *chord_id, int *length, int *gauche, int *droite, int *i
 
 }
 
-void receive_msg(int *rang,int *winner,int *state,int *leader,int *cpt,int *chord_id, int *length, int *gauche, int *droite, int *init, int *msg, int *taille_locale,int *msg_recu) 
+void receive_msg(int *rang,int *winner,int *state,int *leader,int *cpt,int *chord_id, int *length, int *gauche, int *droite,int *msg, int *taille_locale,int *msg_recu) 
 {
 	MPI_Status status;
 	int *new;
@@ -101,7 +101,7 @@ void receive_msg(int *rang,int *winner,int *state,int *leader,int *cpt,int *chor
 	MPI_Recv(msg_recu, MAXNUMBER, MPI_INT, MPI_ANY_SOURCE, TAGMSG, MPI_COMM_WORLD, &status);
 	MPI_Get_count(&status,MPI_INT,&number_amount);
 	printf("%d\n",number_amount );
-	if(*rang > msg_recu[number_amount-2]){
+	if(*rang >= number_amount-2){
 		new = malloc(sizeof(int) * (*rang+3));
 		max = (*rang)+3;
 	}
@@ -109,58 +109,118 @@ void receive_msg(int *rang,int *winner,int *state,int *leader,int *cpt,int *chor
 		new = malloc(sizeof(int) * number_amount);
 		max = number_amount;
 	}
-	printf("%d : recu de %d \n",*rang,status.MPI_SOURCE);
-		if(status.MPI_SOURCE == *gauche){
-			direction = *droite;
-			direction_inverse = *gauche;
+	for(i=0;i<max-1;i++){
+		new[i] = 0;
+	}
+	
+	if(status.MPI_SOURCE == *gauche){
+		direction = *droite;
+		direction_inverse = *gauche;
+	}
+	else{
+		direction = *gauche;
+		direction_inverse = *droite;
+	}
+	printf("%d : recu de %d avec TTL %d number_amount %d\n",*rang,status.MPI_SOURCE,msg_recu[number_amount-1],number_amount );
+
+	if(msg_recu[number_amount-2] == *rang){
+		if(msg_recu[number_amount-1] > 0){
+			*winner = 1;
+			printf("winner\n");
+			return ;
 		}
-		else{
-			direction = *gauche;
-			direction_inverse = *droite;
-		}
-		if(msg_recu[number_amount-2] == *rang){
-			if(msg_recu[number_amount-1] > 0)
-				*winner = 1;
-		}
-		printf("---TTL %d de rang %d au rang %d\n",msg_recu[number_amount-1],msg_recu[number_amount-2],*rang);
-		if(msg_recu[number_amount-2] > *rang && msg_recu[number_amount-1] >= 1){
+	}
+		//printf("---TTL %d de rang %d au rang %d\n",msg_recu[number_amount-1],msg_recu[number_amount-2],*rang);
+		if(
+			(msg_recu[number_amount-2] > *rang && msg_recu[number_amount-1] >= 1)
+			|| (*state == 0 && msg_recu[number_amount-1] >=1)
+			){
 			*state = 0;
 			*leader = msg_recu[number_amount-2];
-			for(i=0;i<*taille_locale-2;i++){
-				new[i] = msg[i];
-			}
-			for(i=0;i<max;i++){
+			//for(i=0;i<*taille_locale-2;i++){
+				new[*rang] = msg[*rang];
+			//}			
+
+			// for(j = 0; j < *taille_locale-2; j++){
+			// printf("%d ", new[j]);
+			// }	
+			// printf("\n%d taille %d\n",*rang,*taille_locale);
+
+			for(i=0;i<number_amount-2;i++){
 				if(msg_recu[i] != 0)
 					new[i] = msg_recu[i];
 			}
+			new[max-2] = msg_recu[number_amount-2];
+			//new[max-1] = msg_recu[number_amount-1];
+			// for(j= 0; j < max; j++){
+			// printf("%d ", new[j]);
+			// }	
+			// printf("%d max %d \n",*rang,max);
+
+			//printf("TTL %d\n",msg_recu[number_amount-1] );
 			if(msg_recu[number_amount-1] > 1){
 				new[max-1] = msg_recu[number_amount-1]-1;
-				msg = realloc(msg,max);
-				for(i=0;i<max;i++){
-					msg[i] = new[i];
-				}
+				// msg = realloc(msg,max);
+				// for(i=0;i<max;i++){
+				// 	msg[i] = new[i];
+				// }
 				MPI_Send(new,max,MPI_INT,direction,TAGMSG,MPI_COMM_WORLD);
-				printf("envoie done %d\n", *rang);
+				printf("%d forward to %d\n", *rang,direction);
 			}
 			else{
 				new[max-1] = 0;
 				MPI_Send(new,max,MPI_INT,direction_inverse,TAGMSG,MPI_COMM_WORLD);
 				printf("TTL 0 envoie done %d à %d\n", *rang,direction_inverse);
 			}
+
 			
 			
 		}
-		if(msg_recu[number_amount-1] == 0){
-				if(msg_recu[number_amount-2] != *rang){;
-					MPI_Send(msg_recu,max,MPI_INT,direction,TAGMSG,MPI_COMM_WORLD);
-				}
-				else{
-					*cpt++;
-				}
+	if(msg_recu[number_amount-1] == 0){
+		if(msg_recu[number_amount-2] != *rang){
+			MPI_Send(msg_recu,number_amount,MPI_INT,direction,TAGMSG,MPI_COMM_WORLD);
+			printf("Initiateur %d TTL%d source%d rang%d trasit à %d\n",msg_recu[number_amount-2],msg_recu[number_amount-1],status.MPI_SOURCE,*rang,direction );
+
+			// for(j= 0; j < number_amount; j++){
+			// printf("%d ", msg_recu[j]);
+			// }	
+			// printf("message de retour %d max %d \n",*rang,max);
 		}
+		else{
+			if(number_amount <= *taille_locale){ //retour de cote inf
+				for(i=0;i<number_amount-2;i++){
+					if(msg_recu[i] != 0)
+						msg[i] = msg_recu[i];
+				}
+			}
+			else{ //cote sup
+				new[max-2] = msg_recu[number_amount-2];
+				new[max-1] = msg_recu[number_amount-1];
+				for(i=0;i<number_amount-2;i++){
+					if(msg_recu[i] != 0)
+						new[i] = msg_recu[i];
+				}
+				msg = realloc(msg,max);
+				msg[*taille_locale-2] = 0;
+				msg[*taille_locale-1] = 0;
+				for(i=0;i<number_amount;i++){
+					if(msg_recu[i] != 0)
+						msg[i] = new[i];
+				}
+				if(*taille_locale < number_amount){
+					*taille_locale = number_amount;
+				}
+				printf("aggrandit %d %d\n",number_amount,max);
+			}
+				
+			//printf("\n%d taille %d\n",*rang,*taille_locale);
+			*cpt=*cpt+1;
+			printf("%d : Arrivé sur init source %d\n",*rang,status.MPI_SOURCE);
+		}
+	}
 		
-	
-	printf("--------Fin %d\n",*rang );
+	free(new);
+	//printf("--------Fin %d\n",*rang );
 	return;
 
 }
@@ -279,12 +339,18 @@ void simulateur()
  	// printf("nb_init ds %d\n",nb_init );
 	for(i = 0; i < NB_SITES; i++){
 		position = i + 1;
-		if(position==1)
+		if(position==1){
 			gauche = NB_SITES;
+			droite = position+1 ;
+		}
+		else if(position == NB_SITES){
+			gauche = position-1 ;
+			droite = 1 ;
+		}
 		else{
 			gauche = position-1 ;
+			droite = position+1; 
 		}
-		droite = (position+1)%NB_SITES; 
 		//déterminer init
 		if(nb_init != 0){
 			init = (rand() % 2); 
@@ -333,7 +399,7 @@ void calcul_finger(int rang)
 	int winner=0,round=0;
 	int leader;
 	int cpt=0;
-	int i;
+	int i,j;
 	int taille_locale;
 	int chord_ids[NB_SITES];// the index + 1 is the mpi rank and the value is chord id
 	int finger_tables[NB_SITES][2][M]; // premiere colonne id chord, deuxieme colonne id MPI
@@ -341,6 +407,7 @@ void calcul_finger(int rang)
 
 	// reception des parametres
 	receive_params(&chord_id,&length,&mpi_gauche,&mpi_droite,&state);
+	//printf("%d gauche %d droite %d\n",rang,mpi_gauche,mpi_droite );
 	// printf("%d\n",state );
 	leader = rang;
 	round = 0;
@@ -354,14 +421,24 @@ void calcul_finger(int rang)
 	msg[rang+1] = rang;
 	msg[rang+2] = (int) pow(2,round);
 	while(state == 1){
-		printf("mpi %d chord id %d gauche %d droite %d init\n",rang,chord_id,mpi_gauche,mpi_droite);
+		//printf("\nmpi %d envoie avec TTL %d-----\n",rang,(int)pow(2,round));
 		MPI_Send(msg, taille_locale, MPI_INT, mpi_gauche, TAGMSG, MPI_COMM_WORLD);
 		MPI_Send(msg, taille_locale, MPI_INT, mpi_droite, TAGMSG, MPI_COMM_WORLD);
 		while(cpt != 2){
-			receive_msg(&rang,&winner,&state,&leader,&cpt,&chord_id,&length,&mpi_gauche,&mpi_droite,&state,msg,&taille_locale,msg_recu);
+			receive_msg(&rang,&winner,&state,&leader,&cpt,&chord_id,&length,&mpi_gauche,&mpi_droite,msg,&taille_locale,msg_recu);
 		}
+		// printf("%d a recu un retour cpt=%d\n",rang,cpt);
 		round++;
 		cpt = 0;
+		msg[taille_locale-1] = (int) pow(2,round);
+
+		for(j = 0; j < taille_locale; j++){
+			printf("%d ", msg[j]);
+		}	
+		printf("\nNext round%d taille %d\n",rang,taille_locale);
+
+		sleep(2);
+		printf("---------------------------------------\n");
 		//msg[sizeof]
 		if(winner){
 			printf(" Mpi %d est le seul vainqueur\n",rang);
@@ -369,7 +446,7 @@ void calcul_finger(int rang)
 		}
 	}
 	while(winner != 1){
-		receive_msg(&rang,&winner,&state,&leader,&cpt,&chord_id,&length,&mpi_gauche,&mpi_droite,&state,msg,&taille_locale,msg_recu);
+		receive_msg(&rang,&winner,&state,&leader,&cpt,&chord_id,&length,&mpi_gauche,&mpi_droite,msg,&taille_locale,msg_recu);
 		winner = 1;
 		for(i=0;i<NB_SITES+2;i++){
 				if(msg[i] == 0){
@@ -377,6 +454,9 @@ void calcul_finger(int rang)
 				}
 		}
 	}
+
+
+	// printf("FIN------------------------------------------------------------\n");
 	// for(i=0;i<NB_SITES;i++){
 	// 	chord_ids[i] = msg[i];
 	// }
@@ -384,7 +464,7 @@ void calcul_finger(int rang)
 	// 	calculate_finger_table(chord_ids, finger_tables, i);
 	// }
 
-	// print_initial_data(chord_ids,finger_tables);
+	//print_initial_data(chord_ids,finger_tables);
 }
 
 
