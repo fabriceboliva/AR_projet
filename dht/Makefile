@@ -4,7 +4,7 @@
 
 CC = mpicc
 LDFLAGS = -lm
-CFLAGS = 
+CFLAGS =
 # -W -Wall
 
 
