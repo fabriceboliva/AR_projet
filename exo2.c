@@ -54,19 +54,24 @@ static void print_initial_data(int *chord_ids, int finger_tables[NB_SITES][2][M]
 	printf("\n");
 }
 
-static void calculate_finger_table(int *chord_ids, int finger_tables[NB_SITES][2][M], int chord_id_position) {
-	int value, mpi_id, j;
+static void calculate_finger_table(int *chord_ids, int *chord_ids_sorted, int finger_tables[NB_SITES][2][M], int chord_id_position) {
+	int value, position, j, i;
+	
+
 	for(j = 0; j < M; j++) {
 		value = (chord_ids[chord_id_position] + ((int) pow(2, j))) % ((int) pow(2, M));
-		mpi_id = find_next_node(value, chord_ids, NB_SITES);
-		if(mpi_id == -1) {
-			finger_tables[chord_id_position][0][j] = chord_ids[0];
+		position = find_next_node(value, chord_ids_sorted, NB_SITES);
+		if(position == -1) {
+			finger_tables[chord_id_position][0][j] = chord_ids_sorted[0];
 			finger_tables[chord_id_position][1][j] = 1; // car rang MPI
 		} else {
-			finger_tables[chord_id_position][0][j] = chord_ids[mpi_id];
-			finger_tables[chord_id_position][1][j] = mpi_id + 1; // car rang MPI
-		}
+			finger_tables[chord_id_position][0][j] = chord_ids_sorted[position];
+			finger_tables[chord_id_position][1][j] = find_position(chord_ids_sorted[position], chord_ids, NB_SITES) + 1; // car rang MPI
+		}	
 	}
+	// printf("printing ft\n");
+	// int_print_table(finger_tables[chord_id_position][0], M);
+	// int_print_table(finger_tables[chord_id_position][1], M);
 }
 ///////////////////////////////////////////////////////////////////////////////////////////
 //										PROGRAMME DHT
@@ -321,6 +326,8 @@ static inline int find_position(int value, int *table, int length)
 static inline int find_next_node(int value, int *chord_ids, int length) 
 {
 	int i;
+	int val;
+	int min;
 	for(i = 0; i < length; i++)
 		if(chord_ids[i] >= value)
 			return i;
@@ -427,6 +434,7 @@ void calcul_finger(int rang)
 	int i,j;
 	int taille_locale;
 	int chord_ids[NB_SITES];// the index + 1 is the mpi rank and the value is chord id
+	int chord_ids_sorted[NB_SITES];
 	int finger_tables[NB_SITES][2][M]; // premiere colonne id chord, deuxieme colonne id MPI
 	//printf("\nCalcul finger_tables\n");
 
@@ -479,7 +487,7 @@ void calcul_finger(int rang)
 
 	printf("FIN %d------------------------------------------------------------\n",rang);
 	if(state){
-		for(i=0;i<NB_SITES;i++){
+	for(i=0;i<NB_SITES;i++){
 			chord_ids[i] = msg[i+1];
 		}
 	}
@@ -488,12 +496,17 @@ void calcul_finger(int rang)
 		chord_ids[i] = msg_recu[i+1];
 		}
 	}
+
+	for(i = 0; i < NB_SITES; i++)
+		chord_ids_sorted[i] = chord_ids[i];
+
+	quickSort(chord_ids_sorted, 0, NB_SITES-1);
 	// for(j = 0; j < NB_SITES; j++){
 	// 		printf("%d ", chord_ids[j]);
 	// }
 	// printf("\n\n");
 	for(i = 0; i < NB_SITES; i++) {
-		calculate_finger_table(chord_ids, finger_tables, i);
+		calculate_finger_table(chord_ids, chord_ids_sorted, finger_tables, i);
 	}
 
 	print_initial_data(chord_ids,finger_tables);
