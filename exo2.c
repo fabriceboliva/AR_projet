@@ -12,7 +12,7 @@
 
 #define TAGINIT		0
 
-#define TAGMSG	1
+#define TAGMSG		1
 #define TAGFOUND	2
 
 #define TAGRES		3
@@ -98,7 +98,7 @@ void receive_msg(int *rang,int *winner,int *state,int *leader,int *cpt,int *chor
 	int direction,direction_inverse;
 	int number_amount;
 	int max;
-	MPI_Recv(msg_recu, MAXNUMBER, MPI_INT, MPI_ANY_SOURCE, TAGMSG, MPI_COMM_WORLD, &status);
+	MPI_Recv(msg_recu, MAXNUMBER, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 	MPI_Get_count(&status,MPI_INT,&number_amount);
 	printf("%d\n",number_amount );
 	if(status.MPI_SOURCE == *gauche){
@@ -109,6 +109,7 @@ void receive_msg(int *rang,int *winner,int *state,int *leader,int *cpt,int *chor
 			direction = *gauche;
 			direction_inverse = *droite;
 	}
+
 	switch(status.MPI_TAG){
 		case TAGMSG :
 			if(*rang >= number_amount-2){
@@ -223,18 +224,23 @@ void receive_msg(int *rang,int *winner,int *state,int *leader,int *cpt,int *chor
 				}
 					
 				free(new);
-		// case TAGFOUND :
-
-		// 			if(msg_recu[number_amount-2] == *rang){
+				break;
+		case TAGFOUND :
+					//printf("TAGFOUND\n");
+					if(msg_recu[number_amount-2] == *rang){
 						
-		// 				printf("Msg transmis\n");
-		// 				return ;
+						printf("Msg transmis\n");
+						return ;
 						
-		// 			}
-		// 			else{
-		// 					MPI_Send(msg_recu,number_amount,MPI_INT,direction,TAGFOUND,MPI_COMM_WORLD);
-		// 					printf("%d forward data to %d\n", *rang,direction);
-		// 			}
+					}
+					else{
+							*winner=1;
+							MPI_Send(msg_recu,number_amount,MPI_INT,direction,TAGFOUND,MPI_COMM_WORLD);
+							//printf("%d forward data to %d\n", *rang,direction);
+					}
+					break;
+		default :
+				return ;
 						
 	}
 	
@@ -472,9 +478,20 @@ void calcul_finger(int rang)
 
 
 	printf("FIN %d------------------------------------------------------------\n",rang);
-	for(i=0;i<NB_SITES;i++){
-		chord_ids[i] = msg[i];
+	if(state){
+		for(i=0;i<NB_SITES;i++){
+			chord_ids[i] = msg[i+1];
+		}
 	}
+	else{
+		for(i=0;i<NB_SITES;i++){
+		chord_ids[i] = msg_recu[i+1];
+		}
+	}
+	// for(j = 0; j < NB_SITES; j++){
+	// 		printf("%d ", chord_ids[j]);
+	// }
+	// printf("\n\n");
 	for(i = 0; i < NB_SITES; i++) {
 		calculate_finger_table(chord_ids, finger_tables, i);
 	}
