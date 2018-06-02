@@ -13,13 +13,12 @@
 #define TAGINIT		0
 #define TAGEND		1
 
-#define TAGOUT		2
-#define TAGIN		3
+#define TAGMSG		2
+#define TAGFOUND	3
+#define TAGRES		4
 
-#define TAGFOUND	4
-#define TAGRES		5
 
-#define MAXNUMBER I
+#define MAXNUMBER 100
 
 
 
@@ -95,46 +94,75 @@ static int new_chord_id(int *table, int length)
 
 void simulator() 
 {
-	int i, position;
-	int gauche, droite;
+	int i, position, temp;
+	int gauche,droite,init;
+	int nb_init;
+	
 
 	printf("\nDHT Centralise\n");
 
 	// data
 	int chord_ids[NB_SITES];
-	int state[NB_SITES];
+	int initiators[NB_SITES];
 	
 	srand(time(NULL));
 
 	// initialisation des identifiants
 	for(i = 0; i < NB_SITES; i++) {
 		chord_ids[i] = new_chord_id(chord_ids, i);
-		state[i] = ((rand() % 4) < 1)?1:0;;
+		initiators[i] = rand() % 2;
 	}
+
 
 	printf("chord_ids table: \n");
 	printf("1 2 3 4 5 6 7 8 9 10\n");
 	int_print_table(chord_ids, NB_SITES);
 	printf("\n");
+
+	nb_init = 1;
 	
+	printf("nb_init ds %d\n",nb_init );
 	for(i = 0; i < NB_SITES; i++){
 		position = i + 1;
-		droite = position % (NB_SITES + 1) - 1;
-		gauche = position % NB_SITES + 1;
+		if(position==1){
+			gauche = NB_SITES;
+			droite = position+1 ;
+		} else if(position == NB_SITES){
+			gauche = position-1 ;
+			droite = 1 ;
+		} else{
+			gauche = position-1 ;
+			droite = position+1; 
+		}
 
-		droite = (droite)?droite:NB_SITES;
+		//déterminer init
+		if(nb_init != 0){
+			init = (rand() % 2); 
+			if(init == 1){
+				nb_init--;
+
+				printf("nb_init %d\n",nb_init );
+			}
+		}
 
 		// printf("envoi a position: %d, chord_ids: %d\n", position, chord_ids[i]);
 		MPI_Send(&chord_ids[i], 1, MPI_INT, position, TAGINIT, MPI_COMM_WORLD);
 
-		//envoi du voisin MPI gauche
+		temp = M;
+
+		// printf("envoi a position: %d, succ_id_chord: %d\n", position, chord_succ[i]);
+		MPI_Send(&temp, 1, MPI_INT, position, TAGINIT, MPI_COMM_WORLD);
+
+		//envoie voisin MPI gauche
 		MPI_Send(&gauche, 1, MPI_INT, position, TAGINIT, MPI_COMM_WORLD);
 
-		//envoi du voisin MPI droite
+		//envoie voisin MPI droite
 		MPI_Send(&droite, 1, MPI_INT, position, TAGINIT, MPI_COMM_WORLD);
 
-		//envoie booleen intialisation
-		MPI_Send(&state[i], 1, MPI_INT, position, TAGINIT, MPI_COMM_WORLD);
+		//envoie voisin MPI droite
+		MPI_Send(&init, 1, MPI_INT, position, TAGINIT, MPI_COMM_WORLD);
+		init=0;
+
 	}
 
 
@@ -145,17 +173,19 @@ void simulator()
 //											PEERS
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-void receive_params(int *chord_id, int *gauche, int *droite, int *state) 
+void receive_params(int *chord_id, int *length, int *gauche, int *droite, int *init) 
 {
 	MPI_Status status;
 
 	MPI_Recv(chord_id, 1, MPI_INT, 0, TAGINIT, MPI_COMM_WORLD, &status);
+	
+	MPI_Recv(length, 1, MPI_INT, 0, TAGINIT, MPI_COMM_WORLD, &status);
 
 	MPI_Recv(gauche, 1, MPI_INT, 0, TAGINIT, MPI_COMM_WORLD, &status);
 	
 	MPI_Recv(droite, 1, MPI_INT, 0, TAGINIT, MPI_COMM_WORLD, &status);
 
-	MPI_Recv(state, 1, MPI_INT, 0, TAGINIT, MPI_COMM_WORLD, &status);
+	MPI_Recv(init, 1, MPI_INT, 0, TAGINIT, MPI_COMM_WORLD, &status);
 	return;
 
 }
@@ -324,74 +354,43 @@ void receive_msg(int *rang,int *winner,int *state,int *leader,int *cpt, int *gau
 }
 
 
-static int build_message(int **message, int round, int leader) {
-	if(round == 0) {
-		msg_size = mpi_id + 2; // chord_ids + leader + ttl
-		msg = (int *) calloc(msg_size, sizeof(int));
-		if(!msg)
-			
-		msg[mpi_id - 1] = chord_id;
-	}
-
-	msg[msg_size - 2] = leader;
-	msg[msg_size - 1] = (int) pow(2, round);
-}
 
 
 void dht_node(int mpi_id)
 {
-	int chord_id, mpi_gauche, mpi_droite, active;
-	int leader, round;
-	int *chord_ids, chord_ids_size;
-	int *msg, msg_size, *in_msg, in_msg_size;
-
+	int chord_id, length;
+	int mpi_gauche,mpi_droite;
+	int state;
+	int *msg;
+	int *msg_recu;
+	int winner=0,round=0;
+	int leader;
 	int cpt=0;
-	int i, j;
+	int i,j;
+	int taille_locale;
 	//printf("\nCalcul finger_tables\n");
 
 	// reception des parametres
-	receive_params(&chord_id, &mpi_gauche, &mpi_droite, &active);
-	printf("chord %d: gauche %d, mpi %d, droite %d, active %d\n", chord_id, mpi_gauche, mpi_id, mpi_droite , active);
-	
-	return;
-
+	receive_params(&chord_id,&length,&mpi_gauche,&mpi_droite,&state);
+	//printf("%d gauche %d droite %d\n",mpi_id,mpi_gauche,mpi_droite );
+	// printf("%d\n",state );
 	leader = mpi_id;
 	round = 0;
-
-	chord_ids = (int *) malloc(mpi_id * sizeof(int));
-	if(!chord_ids)
-		goto err;
-
-	in_msg = (int *) calloc(MAXNUMBER, sizeof(int));
-	if(!in_msg)
-		goto err1;
-
-	chord_ids[mpi_id - 1] = chord_id;
-
-	while(active == 1) {
-
-		build_message(&message);
-
-		
-
+	taille_locale = mpi_id+3;
+	msg = malloc(sizeof(int)*(taille_locale)); //nb rang + rank 0 + ttl + id
+	for(i=0;i<mpi_id+2;i++){
+		msg[i] = 0;
+	}
+	msg_recu = malloc(sizeof(int) * MAXNUMBER);
+	msg[mpi_id] = chord_id;
+	msg[mpi_id+1] = mpi_id;
+	msg[mpi_id+2] = (int) pow(2,round);
+	while(state == 1){
 		//printf("\nmpi %d envoie avec TTL %d-----\n",mpi_id,(int)pow(2,round));
-		MPI_Send(msg, msg_size, MPI_INT, mpi_gauche, TAGOUT, MPI_COMM_WORLD);
-		MPI_Send(msg, msg_size, MPI_INT, mpi_droite, TAGOUT, MPI_COMM_WORLD);
-
-
-		for(i = 0; i < 2; i++){
-			MPI_Recv(msg_recu, MAXNUMBER, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-			if()
-			MPI_Get_count(&status, MPI_INT, &in_msg_size);
-		}
-		
-
-		//teste si j'ai perdu si ou je sors
-
-		//
-
+		MPI_Send(msg, taille_locale, MPI_INT, mpi_gauche, TAGMSG, MPI_COMM_WORLD);
+		MPI_Send(msg, taille_locale, MPI_INT, mpi_droite, TAGMSG, MPI_COMM_WORLD);
 		while(cpt != 2){
-			receive_msg(&mpi_id,&winner,&active,&leader,&cpt,&mpi_gauche,&mpi_droite,msg,&taille_locale,msg_recu);
+			receive_msg(&mpi_id,&winner,&state,&leader,&cpt,&mpi_gauche,&mpi_droite,msg,&taille_locale,msg_recu);
 		}
 		// printf("%d a recu un retour cpt=%d\n",mpi_id,cpt);
 		round++;
@@ -411,9 +410,8 @@ void dht_node(int mpi_id)
 			break;
 		}
 	}
-
-	while(winner != 1){ // leader == moi
-		receive_msg(&mpi_id,&winner,&active,&leader,&cpt,&mpi_gauche,&mpi_droite,msg,&taille_locale,msg_recu);
+	while(winner != 1){
+		receive_msg(&mpi_id,&winner,&state,&leader,&cpt,&mpi_gauche,&mpi_droite,msg,&taille_locale,msg_recu);
 		winner = 1;
 		for(i=0;i<NB_SITES+2;i++){
 				if(msg[i] == 0){
@@ -432,8 +430,6 @@ void dht_node(int mpi_id)
 	// }
 
 	//print_initial_data(chord_ids,finger_tables);
-err:
-	return;
 }
 
 

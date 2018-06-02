@@ -1,11 +1,10 @@
 #			Algorothmique Repartie (4I403)
-#		Makefile pour TME 3. Algorithme de l'arbre et l'echo
+#		Makefile pour le projet - DHT CHORD
 
 
 CC = mpicc
 LDFLAGS = -lm
-CFLAGS =
-# -W -Wall
+CFLAGS = -W -Wall
 
 
 DIR=.

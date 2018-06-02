@@ -27,6 +27,7 @@ void dht_node(int mpi_id);
 
 
 // helper functions
+
 static void print_initial_data(int *chord_ids, int finger_tables[NB_SITES][2][M]);
 static void quickSort(int *intArray, int left, int right);
 
@@ -59,7 +60,6 @@ int main (int argc, char* argv[])
 }
 
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////
 //										SIMULATOR
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -73,9 +73,6 @@ static inline int contains(int value, int *table, int length) {
 	return -1;
 }
 
-/*
- * Helper function used to generate a new unique chord id
- */
 static int new_chord_id(int *table, int length) {
 	int id;
 	do {
@@ -85,9 +82,7 @@ static int new_chord_id(int *table, int length) {
 }
 
 
-/*
- * Helper function to find position of a value in the specified table
- */
+
 static inline int find_position(int value, int *table, int length) {
 	int i, position = -1;
 	for(i = 0; i < length; i++)
@@ -96,9 +91,6 @@ static inline int find_position(int value, int *table, int length) {
 	return position;
 }
 
-/*
- * Helper function used in the calculation of the finger table
- */
 static inline int find_next_node(int value, int *chord_ids, int length) {
 	int i;
 	for(i = 0; i < length; i++)
